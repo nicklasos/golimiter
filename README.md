@@ -7,7 +7,9 @@ More about rate limit in [golang.org/x/time/rate](https://godoc.org/golang.org/x
 
 limit := golimiter.NewLimiter(5, 2) // rate and bucket
 
-if limit.Allow("user string idendifier") == false {
-    // You have been banned!
+if limit.Allow("user string identifier") == false {
+    // User has reached its quota
+
+    limit.Ban("user string identifier", time.Second*60) // You can also ban user
 }
 ```
