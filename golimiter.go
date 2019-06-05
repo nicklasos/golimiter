@@ -17,6 +17,7 @@ type Limit struct {
 	mtx      sync.Mutex
 	rate     rate.Limit
 	bucket   int
+	ban      map[string]time.Time
 }
 
 func NewLimiter(r rate.Limit, bucket int) *Limit {
@@ -24,20 +25,36 @@ func NewLimiter(r rate.Limit, bucket int) *Limit {
 		visitors: make(map[string]*visitor),
 		rate:     r,
 		bucket:   bucket,
+		ban:      make(map[string]time.Time),
 	}
 
 	go limit.cleanup()
+	go limit.unban()
 
 	return limit
 }
 
 func (l *Limit) cleanup() {
 	for {
-		time.Sleep(time.Minute * 2)
+		time.Sleep(time.Minute * 1)
 		l.mtx.Lock()
 		for id, v := range l.visitors {
 			if time.Now().Sub(v.lastSeen) > 5*time.Minute {
 				delete(l.visitors, id)
+			}
+		}
+		l.mtx.Unlock()
+	}
+}
+
+func (l *Limit) unban() {
+	for {
+		time.Sleep(time.Minute * 1)
+		l.mtx.Lock()
+		now := time.Now()
+		for id, banTime := range l.ban {
+			if now.After(banTime) {
+				delete(l.ban, id)
 			}
 		}
 		l.mtx.Unlock()
@@ -70,4 +87,14 @@ func (l *Limit) getVisitor(id string) *rate.Limiter {
 
 func (l *Limit) Allow(id string) bool {
 	return l.getVisitor(id).Allow()
+}
+
+func (l *Limit) Ban(id string, d time.Duration) {
+	l.ban[id] = time.Now().Add(d)
+}
+
+func (l *Limit) IsBanned(id string) bool {
+	_, exists := l.ban[id]
+
+	return exists
 }

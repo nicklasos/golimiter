@@ -5,6 +5,20 @@ import (
 	"time"
 )
 
+func TestBan(t *testing.T) {
+	lim := NewLimiter(1, 1)
+
+	if lim.IsBanned("user") {
+		t.Error("User should not be banned")
+	}
+
+	lim.Ban("user", time.Second*1)
+
+	if !lim.IsBanned("user") {
+		t.Error("User should be banned")
+	}
+}
+
 func TestFoo(t *testing.T) {
 	lim := NewLimiter(5, 2)
 	lim2 := NewLimiter(5, 2)
