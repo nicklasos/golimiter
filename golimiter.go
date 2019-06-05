@@ -63,8 +63,8 @@ func (l *Limit) unban() {
 
 func (l *Limit) addVisitor(id string) *rate.Limiter {
 	limiter := rate.NewLimiter(l.rate, l.bucket)
-	l.mtx.Lock()
 
+	l.mtx.Lock()
 	l.visitors[id] = &visitor{limiter, time.Now()}
 	l.mtx.Unlock()
 
@@ -90,11 +90,15 @@ func (l *Limit) Allow(id string) bool {
 }
 
 func (l *Limit) Ban(id string, d time.Duration) {
+	l.mtx.Lock()
 	l.ban[id] = time.Now().Add(d)
+	l.mtx.Unlock()
 }
 
 func (l *Limit) IsBanned(id string) bool {
+	l.mtx.Lock()
 	_, exists := l.ban[id]
+	l.mtx.Unlock()
 
 	return exists
 }
